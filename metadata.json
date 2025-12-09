@@ -1,0 +1,5 @@
+{
+  "name": "GenAI Architect Tutor",
+  "description": "An interactive, gamified platform to teach Generative AI best practices, prompt engineering, and safety using the Gemini API.",
+  "requestFramePermissions": []
+}
