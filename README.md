@@ -91,4 +91,4 @@ The "Graduation" ceremony. It visualizes performance stats (Avg Score, Attempts)
 
 ---
 
-*Submitted for the Kaggle x Google DeepMind Gemini AI Studio Hackathon Dec7th-Dec15th 2025. Built in Google AI Studio by Ken Goyarola and Gemini 3 Pro Thinking*
+*Submitted for the Kaggle x Google DeepMind Gemini AI Studio Hackathon Dec7th-Dec12th 2025. Built in Google AI Studio by Ken Goyarola and Gemini 3 Pro Thinking*
