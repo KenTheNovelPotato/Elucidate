@@ -318,6 +318,17 @@ function App() {
 
         <div className="flex items-center gap-4 text-sm text-slate-400 z-10">
            <button 
+             onClick={() => setHasStarted(false)} 
+             className="hover:text-brand-400 transition-colors flex items-center gap-1 text-xs" 
+             title="Return Home"
+           >
+             <Home size={16} />
+             <span className="hidden sm:inline">Home</span>
+           </button>
+
+           <div className="w-px h-4 bg-dark-800 mx-1" />
+
+           <button 
              onClick={handleResetProgress} 
              className="hover:text-red-400 transition-colors flex items-center gap-1 text-xs" 
              title="Reset Progress"
@@ -325,6 +336,7 @@ function App() {
              <RotateCcw size={14} />
              <span className="hidden sm:inline">Reset</span>
            </button>
+           
            <div className="hidden md:block w-px h-4 bg-dark-800 mx-1" />
            <div className="hidden md:flex items-center gap-2 bg-dark-800 py-1 px-3 rounded-full border border-dark-700">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
