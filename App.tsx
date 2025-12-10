@@ -7,7 +7,7 @@ import { HelperAvatar } from './components/HelperAvatar';
 import { CompletionView } from './components/CompletionView';
 import { Message, Role, EvaluationResult, LessonResult } from './types';
 import { streamChatResponse, evaluateChallenge } from './services/geminiService';
-import { Terminal, ShieldCheck, Github, Home, RotateCcw } from 'lucide-react';
+import { Terminal, ShieldCheck, Github, Home, RotateCcw, BookOpen, MessageSquare, Menu } from 'lucide-react';
 
 const STORAGE_KEY = 'genai_architect_progress';
 
@@ -72,6 +72,9 @@ function App() {
   // Track attempts for the current lesson to add to stats
   const [currentAttempts, setCurrentAttempts] = useState(0);
 
+  // Mobile Tab State
+  const [mobileTab, setMobileTab] = useState<'lesson' | 'chat'>('lesson');
+
   const currentLesson = CURRICULUM[currentLessonIndex];
   // Determine if we are at the last lesson
   const isLastLesson = currentLessonIndex === CURRICULUM.length - 1;
@@ -103,6 +106,7 @@ function App() {
       setCurrentAttempts(0);
       localStorage.removeItem(STORAGE_KEY);
       setHasStarted(false);
+      setMobileTab('lesson');
     }
   };
 
@@ -184,6 +188,7 @@ function App() {
         setIsCompleted(true);
     } else {
         setCurrentLessonIndex(prev => prev + 1);
+        setMobileTab('lesson'); // Always show lesson theory first on new lesson
     }
   };
 
@@ -207,24 +212,24 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-dark-950 text-slate-200 font-sans selection:bg-brand-500/30 animate-in fade-in duration-500">
+    <div className="flex flex-col h-screen bg-dark-950 text-slate-200 font-sans selection:bg-brand-500/30 animate-in fade-in duration-500 overflow-hidden">
       
       {/* Top Bar */}
-      <header className="h-16 border-b border-dark-800 bg-dark-950 flex items-center justify-between px-6 flex-shrink-0 relative">
-        <div className="flex items-center gap-3 z-10">
+      <header className="h-16 border-b border-dark-800 bg-dark-950 flex items-center justify-between px-4 md:px-6 flex-shrink-0 relative z-30">
+        <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-900/50 cursor-pointer hover:bg-brand-500 transition-colors" onClick={() => setHasStarted(false)}>
             <Terminal size={20} />
           </div>
           <div>
-            <h1 className="font-bold text-white tracking-tight">GenAI Architect</h1>
+            <h1 className="font-bold text-white tracking-tight text-sm md:text-base">GenAI Architect</h1>
             <div className="text-[10px] text-brand-400 font-mono flex items-center gap-1">
               <ShieldCheck size={10} />
-              TUTOR MODE ACTIVE
+              <span className="hidden xs:inline">TUTOR MODE ACTIVE</span>
             </div>
           </div>
         </div>
         
-        {/* Progress Bar (Centered) */}
+        {/* Progress Bar (Centered - Desktop) */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex flex-col w-64 lg:w-80">
           <div className="flex justify-between items-center mb-1.5 px-0.5">
               <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
@@ -248,6 +253,11 @@ function App() {
           </div>
         </div>
 
+        {/* Mobile Progress Text (Simple) */}
+        <div className="md:hidden text-xs text-warm-400 font-mono mr-2">
+            {currentLessonIndex + 1}/{CURRICULUM.length}
+        </div>
+
         <div className="flex items-center gap-4 text-sm text-slate-400 z-10">
            <button 
              onClick={handleResetProgress} 
@@ -257,36 +267,40 @@ function App() {
              <RotateCcw size={14} />
              <span className="hidden sm:inline">Reset</span>
            </button>
-           <div className="w-px h-4 bg-dark-800 mx-1" />
-           <button onClick={() => setHasStarted(false)} className="hover:text-white transition-colors" title="Home">
-             <Home size={20} className="opacity-50 hover:opacity-100" />
-           </button>
+           <div className="hidden md:block w-px h-4 bg-dark-800 mx-1" />
            <div className="hidden md:flex items-center gap-2 bg-dark-800 py-1 px-3 rounded-full border border-dark-700">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
               <span className="text-xs font-mono">Gemini 3 Pro</span>
            </div>
-           <Github size={20} className="hover:text-white cursor-pointer transition-colors opacity-50" />
         </div>
       </header>
 
       {/* Main Content Grid */}
-      <main className="flex-1 flex overflow-hidden relative">
-        {/* Left Panel: Lesson & Theory */}
-        <section className="w-full md:w-[450px] lg:w-[500px] flex-shrink-0 z-10 shadow-2xl shadow-black/20">
+      <main className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        
+        {/* Left Panel: Lesson & Theory - Hidden on mobile if tab is 'chat' */}
+        <section className={`
+            w-full md:w-[450px] lg:w-[500px] flex-shrink-0 z-10 shadow-2xl shadow-black/20 md:flex flex-col
+            ${mobileTab === 'lesson' ? 'flex flex-1 overflow-hidden' : 'hidden'}
+        `}>
           <LessonView 
             lesson={currentLesson} 
             evaluation={evaluation}
             isEvaluating={isProcessing}
             onNextLesson={handleNextLesson}
-            hasNext={true} // Always show Next, logic handled inside handleNextLesson
+            hasNext={true} 
           />
         </section>
 
-        {/* Right Panel: Workspace / Chat */}
-        <section className="flex-1 bg-gradient-to-br from-dark-900 to-dark-950 p-4 md:p-6 flex flex-col min-w-0">
+        {/* Right Panel: Workspace / Chat - Hidden on mobile if tab is 'lesson' */}
+        <section className={`
+            flex-1 bg-gradient-to-br from-dark-900 to-dark-950 p-4 md:p-6 flex-col min-w-0 md:flex
+            ${mobileTab === 'chat' ? 'flex h-full' : 'hidden'}
+        `}>
            <div className="max-w-4xl w-full mx-auto h-full flex flex-col">
               <div className="flex items-center justify-between mb-4 px-1">
-                 <h3 className="text-sm font-medium text-slate-400 uppercase tracking-widest">Prompt Engineering Sandbox</h3>
+                 <h3 className="text-sm font-medium text-slate-400 uppercase tracking-widest hidden md:block">Prompt Engineering Sandbox</h3>
+                 <div className="md:hidden text-xs text-slate-400 uppercase tracking-wider font-bold">Workspace</div>
                  <span className="text-xs text-slate-600 font-mono">Session ID: {Date.now().toString().slice(-6)}</span>
               </div>
               
@@ -294,7 +308,12 @@ function App() {
                 <ChatInterface 
                   messages={messages}
                   isLoading={isProcessing}
-                  onSendMessage={handleSendMessage}
+                  onSendMessage={(text) => {
+                      handleSendMessage(text);
+                      // On mobile, if sending from chat tab, we stay there.
+                      // If we implement 'Run Code' style where input is in lesson, we'd switch.
+                      // Here, input is in chat interface, so naturally user is already there.
+                  }}
                   initialValue={currentLesson.challenge.initialPrompt}
                   placeholder="Draft your prompt here to solve the challenge..."
                 />
@@ -308,6 +327,25 @@ function App() {
           messages={messages}
         />
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden h-16 bg-dark-950 border-t border-dark-800 flex items-center justify-around shrink-0 z-40 pb-safe">
+         <button 
+            onClick={() => setMobileTab('lesson')}
+            className={`flex flex-col items-center gap-1 p-2 w-full transition-colors ${mobileTab === 'lesson' ? 'text-brand-400' : 'text-slate-500 hover:text-slate-300'}`}
+         >
+            <BookOpen size={20} />
+            <span className="text-[10px] font-medium uppercase tracking-wide">Lesson</span>
+         </button>
+         <div className="w-px h-8 bg-dark-800" />
+         <button 
+            onClick={() => setMobileTab('chat')}
+            className={`flex flex-col items-center gap-1 p-2 w-full transition-colors ${mobileTab === 'chat' ? 'text-brand-400' : 'text-slate-500 hover:text-slate-300'}`}
+         >
+            <MessageSquare size={20} />
+            <span className="text-[10px] font-medium uppercase tracking-wide">Workspace</span>
+         </button>
+      </div>
     </div>
   );
 }

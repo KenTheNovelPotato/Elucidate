@@ -49,7 +49,7 @@ export const HelperAvatar: React.FC<HelperAvatarProps> = ({ lesson, messages }) 
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 flex flex-col items-end gap-2">
       
       {/* Speech Bubble */}
       {isOpen && (
@@ -113,9 +113,9 @@ export const HelperAvatar: React.FC<HelperAvatarProps> = ({ lesson, messages }) 
             </div>
         </div>
 
-        {/* Label (Only when closed) */}
+        {/* Label (Only when closed, and only on desktop to save mobile space) */}
         {!isOpen && (
-            <span className="text-white font-semibold text-sm whitespace-nowrap">
+            <span className="text-white font-semibold text-sm whitespace-nowrap hidden md:inline">
                 Need a Hint?
             </span>
         )}
