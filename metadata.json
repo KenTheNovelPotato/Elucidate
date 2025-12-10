@@ -1,5 +1,5 @@
 {
-  "name": "GenAI Architect Tutor",
+  "name": "\"Elucidate\" Making prompt engineering accessible",
   "description": "An interactive, gamified platform to teach Generative AI best practices, prompt engineering, and safety using the Gemini API.",
   "requestFramePermissions": []
 }
