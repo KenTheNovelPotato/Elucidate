@@ -1,13 +1,45 @@
-import React from 'react';
-import { Terminal, Sparkles, BrainCircuit, ShieldCheck, ArrowRight, Code2 } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Terminal, Sparkles, BrainCircuit, ShieldCheck, ArrowRight, Code2, Unlock, Award, Lock, Key, X } from 'lucide-react';
 
 interface LandingPageProps {
   onStart: () => void;
   lessonProgress?: number;
+  onDevUnlock?: () => void;
+  onDevComplete?: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onStart, lessonProgress = 0 }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onStart, lessonProgress = 0, onDevUnlock, onDevComplete }) => {
   const hasProgress = lessonProgress > 0;
+  const [showDevTools, setShowDevTools] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [authError, setAuthError] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isAuthModalOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isAuthModalOpen]);
+
+  const handleAuthSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === "CrustaceanCreation") {
+      setShowDevTools(true);
+      setIsAuthModalOpen(false);
+      setPasswordInput("");
+      setAuthError(false);
+    } else {
+      setAuthError(true);
+      setPasswordInput("");
+    }
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+    setPasswordInput("");
+    setAuthError(false);
+  };
 
   return (
     <div className="min-h-screen bg-dark-950 text-slate-200 flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-brand-500/30">
@@ -58,7 +90,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, lessonProgres
         </div>
 
         {/* CTA */}
-        <div className="pt-8">
+        <div className="pt-8 flex flex-col items-center">
           <button 
             onClick={onStart}
             className="group relative px-8 py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-full font-semibold text-lg transition-all shadow-lg shadow-brand-900/50 flex items-center gap-3 overflow-hidden"
@@ -69,11 +101,99 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, lessonProgres
             <ArrowRight className="relative z-10 group-hover:translate-x-1 transition-transform" />
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
           </button>
-          <p className="mt-4 text-xs text-slate-500 font-mono">
-            {hasProgress ? "Progress saved" : "No prior AI experience required • Free to explore"}
-          </p>
+          
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <p className="text-xs text-slate-500 font-mono">
+              {hasProgress ? "Progress saved" : "No prior AI experience required • Free to explore"}
+            </p>
+            
+            <div className="mt-4 min-h-[40px] flex items-center justify-center">
+              {showDevTools ? (
+                <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2">
+                  {onDevUnlock && (
+                    <button 
+                      onClick={onDevUnlock} 
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-950/30 border border-red-900/30 text-red-500 text-[10px] hover:bg-red-950/50 hover:text-red-400 transition-colors uppercase tracking-wider font-bold"
+                      title="Developer Mode: Unlock all lessons"
+                    >
+                      <Unlock size={10} />
+                      Dev: Unlock All
+                    </button>
+                  )}
+                  {onDevComplete && (
+                    <button 
+                      onClick={onDevComplete} 
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-950/30 border border-blue-900/30 text-blue-500 text-[10px] hover:bg-blue-950/50 hover:text-blue-400 transition-colors uppercase tracking-wider font-bold"
+                      title="Developer Mode: Simulate Course Completion"
+                    >
+                      <Award size={10} />
+                      Dev: Simulate Grad
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="p-2 text-dark-800 hover:text-dark-700 transition-colors rounded-full"
+                  title="Restricted Access"
+                >
+                  <Lock size={12} />
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      {isAuthModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-dark-900 border border-dark-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={closeAuthModal}
+              className="absolute top-4 right-4 text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="flex flex-col items-center gap-4 mb-6">
+              <div className="w-12 h-12 bg-dark-800 rounded-full flex items-center justify-center border border-dark-700">
+                <Key size={20} className="text-brand-400" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-bold text-white">Developer Access</h3>
+                <p className="text-sm text-slate-400">Enter the access code to unlock tools.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              <div>
+                <input
+                  ref={inputRef}
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    setAuthError(false);
+                  }}
+                  className={`w-full bg-dark-950 border ${authError ? 'border-red-500/50 focus:border-red-500' : 'border-dark-700 focus:border-brand-500'} rounded-lg px-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-500/50 transition-all text-center tracking-widest`}
+                  placeholder="••••••••"
+                />
+                {authError && (
+                  <p className="text-red-400 text-xs mt-2 text-center">Access Denied: Invalid Password</p>
+                )}
+              </div>
+              
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg font-medium transition-colors shadow-lg shadow-brand-900/20"
+              >
+                Authenticate
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

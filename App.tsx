@@ -5,6 +5,7 @@ import { LessonView } from './components/LessonView';
 import { LandingPage } from './components/LandingPage';
 import { HelperAvatar } from './components/HelperAvatar';
 import { CompletionView } from './components/CompletionView';
+import { CourseNavigation } from './components/CourseNavigation';
 import { Message, Role, EvaluationResult, LessonResult } from './types';
 import { streamChatResponse, evaluateChallenge } from './services/geminiService';
 import { Terminal, ShieldCheck, Github, Home, RotateCcw, BookOpen, MessageSquare, Menu } from 'lucide-react';
@@ -32,8 +33,24 @@ function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         const savedIndex = typeof parsed.currentLessonIndex === 'number' ? parsed.currentLessonIndex : 0;
-        // Ensure index is valid within current curriculum bounds
         return Math.min(Math.max(0, savedIndex), CURRICULUM.length - 1);
+      }
+    } catch (e) {
+      console.warn('Failed to parse progress from storage');
+    }
+    return 0;
+  });
+
+  const [furthestLessonIndex, setFurthestLessonIndex] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Default furthest to current if missing (migration)
+        const savedFurthest = typeof parsed.furthestLessonIndex === 'number' 
+          ? parsed.furthestLessonIndex 
+          : (typeof parsed.currentLessonIndex === 'number' ? parsed.currentLessonIndex : 0);
+        return Math.min(Math.max(0, savedFurthest), CURRICULUM.length);
       }
     } catch (e) {
       console.warn('Failed to parse progress from storage');
@@ -53,7 +70,6 @@ function App() {
     }
   });
 
-  // Track results for final analysis
   const [lessonResults, setLessonResults] = useState<LessonResult[]>(() => {
     try {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -68,15 +84,11 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
-  
-  // Track attempts for the current lesson to add to stats
   const [currentAttempts, setCurrentAttempts] = useState(0);
-
-  // Mobile Tab State
   const [mobileTab, setMobileTab] = useState<'lesson' | 'chat'>('lesson');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const currentLesson = CURRICULUM[currentLessonIndex];
-  // Determine if we are at the last lesson
   const isLastLesson = currentLessonIndex === CURRICULUM.length - 1;
 
   // Persist state changes
@@ -84,10 +96,11 @@ function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       hasStarted,
       currentLessonIndex,
+      furthestLessonIndex,
       isCompleted,
       lessonResults
     }));
-  }, [hasStarted, currentLessonIndex, isCompleted, lessonResults]);
+  }, [hasStarted, currentLessonIndex, furthestLessonIndex, isCompleted, lessonResults]);
 
   // Reset chat when lesson changes
   useEffect(() => {
@@ -99,6 +112,7 @@ function App() {
   const handleResetProgress = () => {
     if (window.confirm("Are you sure you want to reset your progress? This will return you to Lesson 1.")) {
       setCurrentLessonIndex(0);
+      setFurthestLessonIndex(0);
       setMessages([]);
       setEvaluation(null);
       setLessonResults([]);
@@ -107,13 +121,34 @@ function App() {
       localStorage.removeItem(STORAGE_KEY);
       setHasStarted(false);
       setMobileTab('lesson');
+      setIsMenuOpen(false);
     }
+  };
+
+  const handleDevUnlock = () => {
+    // Unlocks all lessons and starts the app
+    setFurthestLessonIndex(CURRICULUM.length - 1);
+    setHasStarted(true);
+  };
+
+  const handleDevComplete = () => {
+    // Generate mock results for visualization
+    const mockResults: LessonResult[] = CURRICULUM.map(lesson => ({
+        lessonId: lesson.id,
+        lessonTitle: lesson.title,
+        score: Math.floor(Math.random() * 20) + 80, // Random score 80-100
+        attempts: Math.floor(Math.random() * 3) + 1 // Random attempts 1-3
+    }));
+    
+    setLessonResults(mockResults);
+    setFurthestLessonIndex(CURRICULUM.length);
+    setHasStarted(true);
+    setIsCompleted(true);
   };
 
   const handleSendMessage = useCallback(async (text: string) => {
     setCurrentAttempts(prev => prev + 1);
 
-    // 1. Add user message
     const userMsg: Message = {
       id: Date.now().toString(),
       role: Role.USER,
@@ -123,14 +158,12 @@ function App() {
     
     setMessages(prev => [...prev, userMsg]);
     setIsProcessing(true);
-    setEvaluation(null); // Clear old eval while thinking
+    setEvaluation(null); 
 
     try {
-      // 2. Stream AI response (The "Subject" AI)
       let fullResponseText = "";
       const assistantMsgId = (Date.now() + 1).toString();
       
-      // Add placeholder for assistant
       setMessages(prev => [
         ...prev, 
         { id: assistantMsgId, role: Role.MODEL, text: "", timestamp: Date.now() }
@@ -147,7 +180,6 @@ function App() {
         ));
       }
 
-      // 3. Evaluate the interaction (The "Judge" AI)
       const evalResult = await evaluateChallenge(
         text, 
         fullResponseText, 
@@ -155,18 +187,18 @@ function App() {
       );
       setEvaluation(evalResult);
 
-      // 4. If passed, store result for final analysis
       if (evalResult.passed) {
         setLessonResults(prev => {
-            // Remove previous result for this lesson if exists, keep best or just replace
             const filtered = prev.filter(r => r.lessonId !== currentLesson.id);
             return [...filtered, {
                 lessonId: currentLesson.id,
                 lessonTitle: currentLesson.title,
                 score: evalResult.score,
-                attempts: currentAttempts + 1 // +1 because we just incremented state but logic runs in closure
+                attempts: currentAttempts + 1
             }];
         });
+        // Unlock next lesson
+        setFurthestLessonIndex(prev => Math.max(prev, currentLessonIndex + 1));
       }
 
     } catch (error) {
@@ -181,15 +213,20 @@ function App() {
     } finally {
       setIsProcessing(false);
     }
-  }, [messages, currentLesson, currentAttempts]);
+  }, [messages, currentLesson, currentAttempts, currentLessonIndex]);
 
   const handleNextLesson = () => {
     if (isLastLesson) {
         setIsCompleted(true);
     } else {
         setCurrentLessonIndex(prev => prev + 1);
-        setMobileTab('lesson'); // Always show lesson theory first on new lesson
+        setMobileTab('lesson');
     }
+  };
+
+  const handleSelectLesson = (index: number) => {
+    setCurrentLessonIndex(index);
+    setMobileTab('lesson');
   };
 
   if (!hasStarted) {
@@ -197,6 +234,8 @@ function App() {
       <LandingPage 
         onStart={() => setHasStarted(true)} 
         lessonProgress={currentLessonIndex}
+        onDevUnlock={handleDevUnlock}
+        onDevComplete={handleDevComplete}
       />
     );
   }
@@ -214,23 +253,42 @@ function App() {
   return (
     <div className="flex flex-col h-screen bg-dark-950 text-slate-200 font-sans selection:bg-brand-500/30 animate-in fade-in duration-500 overflow-hidden">
       
+      <CourseNavigation 
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        curriculum={CURRICULUM}
+        currentLessonIndex={currentLessonIndex}
+        furthestLessonIndex={furthestLessonIndex}
+        lessonResults={lessonResults}
+        onSelectLesson={handleSelectLesson}
+      />
+
       {/* Top Bar */}
       <header className="h-16 border-b border-dark-800 bg-dark-950 flex items-center justify-between px-4 md:px-6 flex-shrink-0 relative z-30">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-900/50 cursor-pointer hover:bg-brand-500 transition-colors" onClick={() => setHasStarted(false)}>
-            <Terminal size={20} />
-          </div>
-          <div>
-            <h1 className="font-bold text-white tracking-tight text-sm md:text-base">GenAI Architect</h1>
-            <div className="text-[10px] text-brand-400 font-mono flex items-center gap-1">
-              <ShieldCheck size={10} />
-              <span className="hidden xs:inline">TUTOR MODE ACTIVE</span>
+          <button 
+            onClick={() => setIsMenuOpen(true)}
+            className="p-2 -ml-2 text-slate-400 hover:text-white hover:bg-dark-800 rounded-lg transition-colors"
+          >
+            <Menu size={20} />
+          </button>
+          
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-brand-900/50 cursor-pointer hover:bg-brand-500 transition-colors" onClick={() => setHasStarted(false)}>
+              <Terminal size={20} />
+            </div>
+            <div>
+              <h1 className="font-bold text-white tracking-tight text-sm md:text-base">GenAI Architect</h1>
+              <div className="text-[10px] text-brand-400 font-mono flex items-center gap-1">
+                <ShieldCheck size={10} />
+                <span className="hidden xs:inline">TUTOR MODE ACTIVE</span>
+              </div>
             </div>
           </div>
         </div>
         
         {/* Progress Bar (Centered - Desktop) */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex flex-col w-64 lg:w-80">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 hidden md:flex flex-col w-64 lg:w-80 pointer-events-none">
           <div className="flex justify-between items-center mb-1.5 px-0.5">
               <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
                   Milestone Progress
@@ -244,7 +302,7 @@ function App() {
                   <div 
                       key={idx}
                       className={`h-full flex-1 rounded-full transition-all duration-500 ${
-                          idx <= currentLessonIndex 
+                          idx <= furthestLessonIndex // Show progress based on furthest reached
                               ? 'bg-warm-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]' 
                               : 'bg-dark-800'
                       }`}
@@ -253,7 +311,7 @@ function App() {
           </div>
         </div>
 
-        {/* Mobile Progress Text (Simple) */}
+        {/* Mobile Progress Text */}
         <div className="md:hidden text-xs text-warm-400 font-mono mr-2">
             {currentLessonIndex + 1}/{CURRICULUM.length}
         </div>
@@ -310,9 +368,6 @@ function App() {
                   isLoading={isProcessing}
                   onSendMessage={(text) => {
                       handleSendMessage(text);
-                      // On mobile, if sending from chat tab, we stay there.
-                      // If we implement 'Run Code' style where input is in lesson, we'd switch.
-                      // Here, input is in chat interface, so naturally user is already there.
                   }}
                   initialValue={currentLesson.challenge.initialPrompt}
                   placeholder="Draft your prompt here to solve the challenge..."
