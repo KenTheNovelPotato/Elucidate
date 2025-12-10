@@ -91,4 +91,4 @@ The "Graduation" ceremony. It visualizes performance stats (Avg Score, Attempts)
 
 ---
 
-*Submitted for the Kaggle x Google DeepMind Gemini Long Context Hackathon.*
+*Submitted for the Kaggle x Google DeepMind Gemini AI Studio Hackathon Dec7th-Dec15th 2025.*
