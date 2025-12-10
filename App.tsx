@@ -4,7 +4,8 @@ import { ChatInterface } from './components/ChatInterface';
 import { LessonView } from './components/LessonView';
 import { LandingPage } from './components/LandingPage';
 import { HelperAvatar } from './components/HelperAvatar';
-import { Message, Role, EvaluationResult, AppState } from './types';
+import { CompletionView } from './components/CompletionView';
+import { Message, Role, EvaluationResult, LessonResult } from './types';
 import { streamChatResponse, evaluateChallenge } from './services/geminiService';
 import { Terminal, ShieldCheck, Github, Home, RotateCcw } from 'lucide-react';
 
@@ -40,28 +41,56 @@ function App() {
     return 0;
   });
 
+  const [isCompleted, setIsCompleted] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return typeof parsed.isCompleted === 'boolean' ? parsed.isCompleted : false;
+      }
+    } catch (e) {
+        return false;
+    }
+  });
+
+  // Track results for final analysis
+  const [lessonResults, setLessonResults] = useState<LessonResult[]>(() => {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            return Array.isArray(parsed.lessonResults) ? parsed.lessonResults : [];
+        }
+    } catch (e) { return []; }
+    return [];
+  });
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   
+  // Track attempts for the current lesson to add to stats
+  const [currentAttempts, setCurrentAttempts] = useState(0);
+
   const currentLesson = CURRICULUM[currentLessonIndex];
-  const hasNext = currentLessonIndex < CURRICULUM.length - 1;
+  // Determine if we are at the last lesson
+  const isLastLesson = currentLessonIndex === CURRICULUM.length - 1;
 
   // Persist state changes
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       hasStarted,
-      currentLessonIndex
+      currentLessonIndex,
+      isCompleted,
+      lessonResults
     }));
-  }, [hasStarted, currentLessonIndex]);
+  }, [hasStarted, currentLessonIndex, isCompleted, lessonResults]);
 
-  // Reset chat when lesson changes, pre-fill if needed
+  // Reset chat when lesson changes
   useEffect(() => {
-    // Only reset messages if we are actually switching lessons, not just reloading the page
-    // We could persist messages too, but for now, let's just clear chat on lesson change
-    // to keep the prompt sandbox clean for the specific challenge.
     setMessages([]);
     setEvaluation(null);
+    setCurrentAttempts(0);
   }, [currentLessonIndex]);
 
   const handleResetProgress = () => {
@@ -69,13 +98,17 @@ function App() {
       setCurrentLessonIndex(0);
       setMessages([]);
       setEvaluation(null);
+      setLessonResults([]);
+      setIsCompleted(false);
+      setCurrentAttempts(0);
       localStorage.removeItem(STORAGE_KEY);
-      // Optional: Send them back to landing page
       setHasStarted(false);
     }
   };
 
   const handleSendMessage = useCallback(async (text: string) => {
+    setCurrentAttempts(prev => prev + 1);
+
     // 1. Add user message
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -111,13 +144,26 @@ function App() {
       }
 
       // 3. Evaluate the interaction (The "Judge" AI)
-      // We evaluate silently in the background after the response is done
       const evalResult = await evaluateChallenge(
         text, 
         fullResponseText, 
         currentLesson.challenge.criteria
       );
       setEvaluation(evalResult);
+
+      // 4. If passed, store result for final analysis
+      if (evalResult.passed) {
+        setLessonResults(prev => {
+            // Remove previous result for this lesson if exists, keep best or just replace
+            const filtered = prev.filter(r => r.lessonId !== currentLesson.id);
+            return [...filtered, {
+                lessonId: currentLesson.id,
+                lessonTitle: currentLesson.title,
+                score: evalResult.score,
+                attempts: currentAttempts + 1 // +1 because we just incremented state but logic runs in closure
+            }];
+        });
+      }
 
     } catch (error) {
       console.error(error);
@@ -131,11 +177,13 @@ function App() {
     } finally {
       setIsProcessing(false);
     }
-  }, [messages, currentLesson]);
+  }, [messages, currentLesson, currentAttempts]);
 
   const handleNextLesson = () => {
-    if (hasNext) {
-      setCurrentLessonIndex(prev => prev + 1);
+    if (isLastLesson) {
+        setIsCompleted(true);
+    } else {
+        setCurrentLessonIndex(prev => prev + 1);
     }
   };
 
@@ -146,6 +194,16 @@ function App() {
         lessonProgress={currentLessonIndex}
       />
     );
+  }
+
+  if (isCompleted) {
+      return (
+          <CompletionView 
+            results={lessonResults}
+            onReset={handleResetProgress}
+            onHome={() => setHasStarted(false)}
+          />
+      );
   }
 
   return (
@@ -220,7 +278,7 @@ function App() {
             evaluation={evaluation}
             isEvaluating={isProcessing}
             onNextLesson={handleNextLesson}
-            hasNext={hasNext}
+            hasNext={true} // Always show Next, logic handled inside handleNextLesson
           />
         </section>
 

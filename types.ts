@@ -35,6 +35,13 @@ export interface EvaluationResult {
   score: number; // 0-100
 }
 
+export interface LessonResult {
+  lessonId: string;
+  lessonTitle: string;
+  score: number;
+  attempts: number;
+}
+
 export enum AppState {
   LESSON = 'LESSON',
   FREE_PLAY = 'FREE_PLAY'

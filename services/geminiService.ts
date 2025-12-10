@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Message, Role, EvaluationResult, ChallengeCriteria, Lesson } from '../types';
+import { Message, Role, EvaluationResult, ChallengeCriteria, Lesson, LessonResult } from '../types';
 
 // NOTE: In a production app, these should be proxy calls to a backend to hide the key.
 // For this demo, we assume process.env.API_KEY is available in the build environment.
@@ -151,5 +151,49 @@ export async function generateHint(
   } catch (error) {
     console.error("Hint generation failed", error);
     return "I'm having trouble thinking of a hint right now. Try reading the theory section again!";
+  }
+}
+
+/**
+ * Generates a final course analysis based on the user's performance across all lessons.
+ */
+export async function* generateFinalAnalysis(
+  results: LessonResult[]
+): AsyncGenerator<string, void, unknown> {
+  if (!API_KEY) return;
+
+  const resultsSummary = results.map(r => 
+    `- Lesson: ${r.lessonTitle}\n  Score: ${r.score}/100\n  Attempts: ${r.attempts}`
+  ).join('\n');
+
+  const prompt = `
+    You are a Senior AI Architecture Professor. The user has just completed a course on Prompt Engineering.
+    
+    Here is their performance report:
+    ${resultsSummary}
+    
+    TASK:
+    Write a personalized graduation speech and analysis for this student.
+    
+    Structure your response as follows:
+    1. **Commendation:** Congratulate them on specific strengths based on their high scores.
+    2. **Analysis:** Briefly analyze their learning curve. Did they struggle with structure (JSON/Delimiters) or creativity (Persona)?
+    3. **Future Pointers:** Give 3 actionable, advanced tips for them to continue learning, based on where they might have had lower scores or higher attempts.
+    
+    Tone: Inspiring, professional, yet warm. Use formatting (bolding, lists) to make it readable.
+  `;
+
+  const chat = ai.chats.create({
+    model: GENERATION_MODEL,
+    config: {
+      thinkingConfig: { thinkingBudget: 4096 } // A bit of thinking for a good analysis
+    }
+  });
+
+  const stream = await chat.sendMessageStream({ message: prompt });
+  for await (const chunk of stream) {
+    if (chunk.text) {
+      yield chunk.text;
+    }
   }
 }
