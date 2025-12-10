@@ -52,20 +52,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, lessonProgres
       <div className="max-w-5xl w-full z-10 flex flex-col items-center text-center space-y-12 animate-in fade-in zoom-in duration-700">
         
         {/* Header */}
-        <div className="space-y-6 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-dark-800/50 border border-brand-500/30 text-brand-400 text-xs font-mono mb-4 backdrop-blur-md">
+        <div className="space-y-4 max-w-3xl flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-dark-800/50 border border-brand-500/30 text-brand-400 text-xs font-mono mb-2 backdrop-blur-md">
             <Sparkles size={12} className="text-warm-400" />
             <span>Powered by Gemini 3 Pro</span>
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight leading-tight">
+          <h1 className="text-6xl md:text-8xl font-black text-white tracking-tighter drop-shadow-2xl mb-2">
+            Elucidate
+          </h1>
+
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-300 tracking-tight leading-tight">
             Master the Art of <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-warm-500">
               Generative AI
             </span>
-          </h1>
+          </h2>
           
-          <p className="text-lg md:text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-lg text-slate-400 leading-relaxed max-w-2xl mx-auto pt-4">
             Unlock the full potential of AI without the confusion. Join our interactive guide to learn prompt engineering, control model behavior, and build with confidence.
           </p>
         </div>
@@ -91,16 +95,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStart, lessonProgres
 
         {/* CTA */}
         <div className="pt-8 flex flex-col items-center">
-          <button 
-            onClick={onStart}
-            className="group relative px-8 py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-full font-semibold text-lg transition-all shadow-lg shadow-brand-900/50 flex items-center gap-3 overflow-hidden"
-          >
-            <span className="relative z-10">
-              {hasProgress ? `Continue to Lesson ${lessonProgress + 1}` : "Start Your Journey"}
-            </span>
-            <ArrowRight className="relative z-10 group-hover:translate-x-1 transition-transform" />
-            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-          </button>
+          <div className="flex flex-col items-center">
+            <button 
+              onClick={onStart}
+              className="group relative px-8 py-4 bg-brand-600 hover:bg-brand-500 text-white rounded-full font-semibold text-lg transition-all shadow-lg shadow-brand-900/50 flex items-center gap-3 overflow-hidden"
+            >
+              <span className="relative z-10">
+                {hasProgress ? `Continue to Lesson ${lessonProgress + 1}` : "Start Your Journey"}
+              </span>
+              <ArrowRight className="relative z-10 group-hover:translate-x-1 transition-transform" />
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+            </button>
+          </div>
           
           <div className="mt-4 flex flex-col items-center gap-2">
             <p className="text-xs text-slate-500 font-mono">
