@@ -1,5 +1,3 @@
-![Elucidate Project Banner](https://github.com/KenGoyarola/Elucidate_Hackathon/blob/main/Screenshot%202025-02-23%20185121.jpg?raw=true)
-
 # Elucidate: The GenAI Architect Tutor
 
 **Elucidate** is an interactive, gamified web platform designed to democratize the art of Prompt Engineering. Built for the **Kaggle x Google DeepMind Hackathon**, it transforms the complex nuances of Generative AI interaction into a structured, hands-on curriculum.
